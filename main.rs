@@ -14,6 +14,30 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
     
     loop {}
 }
+#[repr(u8)]
+enum BMPADDRESSES{
+    Bmp280RegisterDigT1 = 0x88,
+    Bmp280RegisterDigT2 = 0x8A,
+    Bmp280RegisterDigT3 = 0x8C,
+    Bmp280RegisterDigP1 = 0x8E,
+    Bmp280RegisterDigP2 = 0x90,
+    Bmp280RegisterDigP3 = 0x92,
+    Bmp280RegisterDigP4 = 0x94,
+    Bmp280RegisterDigP5 = 0x96,
+    Bmp280RegisterDigP6 = 0x98,
+    Bmp280RegisterDigP7 = 0x9A,
+    Bmp280RegisterDigP8 = 0x9C,
+    Bmp280RegisterDigP9 = 0x9E,
+    Bmp280RegisterChipid = 0xD0,
+    Bmp280RegisterVersion = 0xD1,
+    Bmp280RegisterSoftreset = 0xE0,
+    Bmp280RegisterCal26 = 0xE1, /**< R calibration = 0xE1-0xF0 */
+    Bmp280RegisterStatus = 0xF3,
+    Bmp280RegisterControl = 0xF4,
+    Bmp280RegisterConfig = 0xF5,
+    Bmp280RegisterPressuredata = 0xF7,
+    Bmp280RegisterTempdata = 0xFA,
+  }
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -49,7 +73,7 @@ async fn main(spawner: Spawner) {
 
     // need a read function that takes a register as a parameter and reads from it 8 bytes worth of data to a buffer  and returns the buffer
     // spawner.must_spawn(read_8_bytes(bmp280_i2c,0xD0)); to read the chip id which is 0x58
-    spawner.must_spawn(read_8_bytes(bmp280_i2c,0xD0));
+    spawner.must_spawn(read_8_bytes(bmp280_i2c,BMPADDRESSES::Bmp280RegisterControl as u8));
 
 
 
@@ -86,3 +110,6 @@ async fn read_8_bytes(mut bmp280_i2c: I2c<'static, esp_hal::Async>, read_from_re
 }
 
 }
+
+// TODO IMPLEMENT READING 16 bytes and  24 bytes
+//  READ THE CALIBRATION AND CALCULATE THE TEMPEATURE 
