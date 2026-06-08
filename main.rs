@@ -34,6 +34,23 @@ impl  bmp_uart{
         self.i2c = i2c;
     }
     
+    async fn read_8(&mut self){
+        todo!();
+    }
+
+    async fn read_16(&mut self){
+        todo!();
+    }
+
+    async fn read_24(&mut self){
+        todo!();
+    }
+
+    async fn read_16_le(&mut self){
+        todo!();
+    }
+
+    
 }
 
 
