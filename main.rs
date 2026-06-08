@@ -43,13 +43,94 @@ pub enum BMPADDRESSES{
     Bmp280RegisterTempdata = 0xFA as u8,
   }
 
+  #[repr(u8)] // <--- We need this to make sure it detects it as a u8 and not a isize
+pub enum SensorSampling {
+    /** No over-sampling. */
+    SamplingNone = 0x00,
+    /** 1x over-sampling. */
+    SamplingX1 = 0x01,
+    /** 2x over-sampling. */
+    SamplingX2 = 0x02,
+    /** 4x over-sampling. */
+    SamplingX4 = 0x03,
+    /** 8x over-sampling. */
+    SamplingX8 = 0x04,
+    /** 16x over-sampling. */
+    SamplingX16 = 0x05
+  }
+  struct Bmp280CalibrationData{
+    dig_t1 : u16,
+    dig_t2 : i16,
+    dig_t3 : i16,
+    
+    dig_p1 : u16,
+    dig_p2 : i16,
+    dig_p3 : i16,
+    dig_p4 : i16,
+    dig_p5 : i16,
+    dig_p6 : i16,
+    dig_p7 : i16,
+    dig_p8 : i16,
+    dig_p9 : i16,
+
+  }
+
+   /** Operating mode for the sensor. */
+pub enum SensorMode {
+    /** Sleep mode. */
+    ModeSleep = 0x00,
+    /** Forced mode. */
+    ModeForced = 0x01,
+    /** Normal mode. */
+    ModeNormal = 0x03,
+    /** Software reset. */
+    ModeSoftResetCode = 0xB6
+  }
+
+   /** Filtering level for sensor data. */
+pub enum SensorFilter {
+    /** No filtering. */
+    FilterOff = 0x00,
+    /** 2x filtering. */
+    FilterX2 = 0x01,
+    /** 4x filtering. */
+    FilterX4 = 0x02,
+    /** 8x filtering. */
+    FilterX8 = 0x03,
+    /** 16x filtering. */
+    FilterX16 = 0x04
+  }
+
+  /** Standby duration in ms */
+pub enum StandbyDuration {
+    /** 1 ms standby. */
+    StandbyMs1 = 0x00,
+    /** 62.5 ms standby. */
+    StandbyMs63 = 0x01,
+    /** 125 ms standby. */
+    StandbyMs125 = 0x02,
+    /** 250 ms standby. */
+    StandbyMs250 = 0x03,
+    /** 500 ms standby. */
+    StandbyMs500 = 0x04,
+    /** 1000 ms standby. */
+    StandbyMs1000 = 0x05,
+    /** 2000 ms standby. */
+    StandbyMs2000 = 0x06,
+    /** 4000 ms standby. */
+    StandbyMs4000 = 0x07
+  }
+
+
   struct bmp_uart{
     i2c:  I2c<'static, esp_hal::Async>,
     chip_address : u8
+
 }
 
 
 impl  bmp_uart{
+    
     
     async fn new(i2c:  I2c<'static, esp_hal::Async>,chip_address : u8 ) -> Self{
         Self {i2c,chip_address}
@@ -96,7 +177,7 @@ impl  bmp_uart{
 
 
         self.read_coefficents().await;
-        self.set_sampling().await;
+        self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX4,SensorSampling::SamplingX4,SensorFilter::FilterX2,StandbyDuration::StandbyMs125).await;
         Timer::after(Duration::from_millis(30)).await;
         true
      }
@@ -137,8 +218,14 @@ impl  bmp_uart{
         todo!();
     }
 
-    async fn set_sampling(&mut self){
+    async fn set_sampling(&mut self, sensor_mode:SensorMode,temperature_sampling:SensorSampling,pressure_sampling:SensorSampling,filter:SensorFilter,duration:StandbyDuration){
         todo!();
+
+
+        CONTINUE FROM LINE 139 
+        // CONTINUE WITH SET SAMPLING YES I MADE AN ERROR BY CHOICE 
+        // https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp#L125
+
     }
 
  
