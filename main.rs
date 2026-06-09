@@ -185,6 +185,15 @@ impl  bmp_uart{
         
 
     }
+    async fn write_8(&mut self , register :u8,value:u8){
+        let mut buffer = [0u8; 2];
+
+        buffer[0] = register; // putting the register in the 1st part of the buffer
+        buffer[1] = value; // putting the value in the second part of the buffer
+
+        self.i2c.write_async(self.chip_address as u8,&mut buffer ).await;
+
+    }
 
     async fn read_8(&mut self){
 
@@ -219,10 +228,21 @@ impl  bmp_uart{
     }
 
     async fn set_sampling(&mut self, sensor_mode:SensorMode,temperature_sampling:SensorSampling,pressure_sampling:SensorSampling,filter:SensorFilter,duration:StandbyDuration){
-        todo!();
+        // todo!();
 
+        // everything is hard coded so no
+        /*
+         *   _measReg.mode = mode;
+                _measReg.osrs_t = tempSampling;
+                _measReg.osrs_p = pressSampling;
 
-        CONTINUE FROM LINE 139 
+                _configReg.filter = filter;
+                _configReg.t_sb = duration;
+         * 
+         * */
+
+        self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, )  NEED TO IMPLEMENT A .get to bitshift numbs since it i'm having troubles  i need to shift all the config data into a u8 and pass it as an arugment
+        // CONTINUE FROM LINE 139 
         // CONTINUE WITH SET SAMPLING YES I MADE AN ERROR BY CHOICE 
         // https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp#L125
 
