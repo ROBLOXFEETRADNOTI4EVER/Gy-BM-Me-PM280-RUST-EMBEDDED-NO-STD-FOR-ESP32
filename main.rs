@@ -60,6 +60,7 @@ pub enum SensorSampling {
   }
 
    /** Operating mode for the sensor. */
+   #[repr(u8)]
 pub enum SensorMode {
     /** Sleep mode. */
     ModeSleep = 0x00,
@@ -72,6 +73,7 @@ pub enum SensorMode {
   }
 
    /** Filtering level for sensor data. */
+   #[repr(u8)]
 pub enum SensorFilter {
     /** No filtering. */
     FilterOff = 0x00,
@@ -86,6 +88,8 @@ pub enum SensorFilter {
   }
 
   /** Standby duration in ms */
+  #[repr(u8)]
+
 pub enum StandbyDuration {
     /** 1 ms standby. */
     StandbyMs1 = 0x00,
@@ -180,7 +184,9 @@ impl  bmp_uart{
 
         self.read_coefficents().await;
         // todo!() later make it so it has default parameters I can just call and save it to the struct itself
-        self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX4,SensorSampling::SamplingX4,SensorFilter::FilterX2,StandbyDuration::StandbyMs125).await;
+        self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX2,
+            SensorSampling::SamplingX4,SensorFilter::FilterX2,
+            StandbyDuration::StandbyMs63).await;
         Timer::after(Duration::from_millis(100)).await;
         true
      }
@@ -251,7 +257,7 @@ impl  bmp_uart{
         let operation = self.i2c.write_read_async(self.chip_address, &[buffer[0]], &mut buffer).await;
         match operation {
             Ok(_) =>{
-               (buffer[0] as u32) << 16 | (buffer[1] as u32) | (buffer[2] as u32)
+               (buffer[0] as u32) << 16 | (buffer[1] as u32)  << 8 | (buffer[2] as u32)
             }
             Err(e) =>{
                 info!("An error accured error:{}",e);
@@ -308,13 +314,15 @@ impl  bmp_uart{
              unsigned int get() { return (t_sb << 5) | (filter << 2) | spi3w_en; }
           */
         let config_get: u8 = ((duration as u8 )<< 5) | ((filter as u8) << 2) ;
-        let ctrl_get: u8 = ((temperature_sampling as u8 )<< 5) | ((pressure_sampling as u8) << 2) ;
+        let ctrl_get: u8 = ((temperature_sampling as u8) << 5) 
+        | ((pressure_sampling as u8) << 2) 
+        | (sensor_mode as u8);  // ← add this
 
 
 
 
         self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, config_get).await;
-        self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, ctrl_get).await;
+        self.write_8(BMPADDRESSES::Bmp280RegisterControl as u8, ctrl_get).await;
         
         
          //NEED TO IMPLEMENT A .get to bitshift numbs since it I'm having troubles  i need to shift all the config data into a u8 and pass it as an arugment
@@ -325,15 +333,14 @@ impl  bmp_uart{
     }
 
     async fn read_temperature(&mut self){
-        let mut var_1:i32;
-        let mut  var_2:i32;
+
 
         // if no snesor id return false -1 ig
  
         let mut adc_t: i32  = (self.read_24(BMPADDRESSES::Bmp280RegisterTempdata as u8).await) as i32;
         adc_t >>= 4;
 
-        var_1 = ((adc_t >> 3) - ((self.dig_t1 as i32) << 1)) * 
+        let var_1 = ((adc_t >> 3) - ((self.dig_t1 as i32) << 1)) * 
         (self.dig_t2 as i32) >> 11;
         
         let var_2 =
@@ -392,7 +399,7 @@ async fn main(spawner: Spawner) {
     bmp280.begin().await;
     loop {
         info!("Hello world!");
-        Timer::after(Duration::from_millis(1000)).await;
+        Timer::after(Duration::from_millis(100)).await;
         bmp280.read_temperature().await;
     }
 
