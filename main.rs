@@ -179,7 +179,7 @@ impl  bmp_uart{
         self.read_coefficents().await;
         // todo!() later make it so it has default parameters I can just call and save it to the struct itself
         self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX4,SensorSampling::SamplingX4,SensorFilter::FilterX2,StandbyDuration::StandbyMs125).await;
-        Timer::after(Duration::from_millis(30)).await;
+        Timer::after(Duration::from_millis(100)).await;
         true
      }
         
@@ -196,36 +196,71 @@ impl  bmp_uart{
 
     }
 
-    async fn read_8(&mut self){
+    async fn read_8(&mut self) -> u8{ // returning 0 if there is a problem
 
         let mut read_8_byte_buffer = [0u8; 1];
         let read_8_bytes = self.i2c.write_read_async(self.chip_address, &[BMPADDRESSES::Bmp280RegisterChipid as u8], &mut read_8_byte_buffer).await; 
         match read_8_bytes{
             Ok(_) =>{
-                
+                    read_8_byte_buffer[0]
 
 
             }
             Err(e) =>{
-                info!("Error {}",e)
+                info!("An error accured error:{}",e);
+                0
             }
         }
     }
 
-    async fn read_16(&mut self){
-        todo!();
+    async fn read_16(&mut self,register :u8) -> u16{ // returning 0 if there is a problem
+        let mut buffer = [0u8; 2];
+        buffer[0] = register;
+
+        let operation = self.i2c.write_read_async(self.chip_address, &[buffer[0]], &mut buffer).await;
+        match operation {
+            Ok(_) =>{
+               (buffer[0] as u16) << 8 | (buffer[1] as u16)
+            }
+            Err(e) =>{
+                info!("An error accured error:{}",e);
+                0
+            }
+        }
+    }
+    
+    async fn read_16_le(&mut self,register :u8) -> u16{
+        let temp = self.read_16(register).await;
+        return (temp >> 8) | (temp << 8);
+    }
+    
+    async fn read_s16(&mut self,register :u8) -> i16{
+        self.read_16(register).await as i16
     }
 
-    async fn read_16_le(&mut self){
-        todo!();
+    async fn read_s16_le(&mut self, register :u8) -> i16{
+        self.read_16_le(register).await as i16
     }
 
-    async fn read_24(&mut self){
-        todo!();
+    async fn read_24(&mut self,register :u8)-> u32{
+        let mut buffer = [0u8; 3];
+        buffer[0] = register;
+
+        let operation = self.i2c.write_read_async(self.chip_address, &[buffer[0]], &mut buffer).await;
+        match operation {
+            Ok(_) =>{
+               (buffer[0] as u32) << 16 | (buffer[1] as u32) | (buffer[2] as u32)
+            }
+            Err(e) =>{
+                info!("An error accured error:{}",e);
+                0
+            }
+        }
     }
 
     async fn read_coefficents(&mut self) {
         todo!();
+        continue from here line 229 https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp
     }
 
     async fn set_sampling(&mut self, sensor_mode:SensorMode,temperature_sampling:SensorSampling,pressure_sampling:SensorSampling,filter:SensorFilter,duration:StandbyDuration){
