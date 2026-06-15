@@ -43,7 +43,7 @@ pub enum BMPADDRESSES{
     Bmp280RegisterTempdata = 0xFA as u8,
   }
 
-  #[repr(8)] // <--- We need this to make sure it detects it as a u8 and not a isize
+    #[repr(u8)] // <--- We need this to make sure it detects it as a u8 and not a isize
 pub enum SensorSampling {
     /** No over-sampling. */
     SamplingNone = 0x00,
@@ -57,22 +57,6 @@ pub enum SensorSampling {
     SamplingX8 = 0x04,
     /** 16x over-sampling. */
     SamplingX16 = 0x05
-  }
-  struct Bmp280CalibrationData{
-    dig_t1 : u16,
-    dig_t2 : i16,
-    dig_t3 : i16,
-    
-    dig_p1 : u16,
-    dig_p2 : i16,
-    dig_p3 : i16,
-    dig_p4 : i16,
-    dig_p5 : i16,
-    dig_p6 : i16,
-    dig_p7 : i16,
-    dig_p8 : i16,
-    dig_p9 : i16,
-
   }
 
    /** Operating mode for the sensor. */
@@ -124,7 +108,23 @@ pub enum StandbyDuration {
 
   struct bmp_uart{
     i2c:  I2c<'static, esp_hal::Async>,
-    chip_address : u8
+    chip_address : u8,
+
+
+
+    dig_t1 : u16,
+    dig_t2 : i16,
+    dig_t3 : i16,
+    
+    dig_p1 : u16,
+    dig_p2 : i16,
+    dig_p3 : i16,
+    dig_p4 : i16,
+    dig_p5 : i16,
+    dig_p6 : i16,
+    dig_p7 : i16,
+    dig_p8 : i16,
+    dig_p9 : i16,
 
 }
 
@@ -133,7 +133,9 @@ impl  bmp_uart{
     
     
     async fn new(i2c:  I2c<'static, esp_hal::Async>,chip_address : u8 ) -> Self{
-        Self {i2c,chip_address}
+        Self {i2c,chip_address
+            ,dig_p1:0,dig_p2:0,dig_p3:0,dig_p4:0,dig_p5:0,dig_p6:0,dig_p7:0,dig_p8:0,dig_p9:0,
+            dig_t1:0,dig_t2:0,dig_t3:0}
 
     }
     async fn print_self_data(&mut self){
@@ -259,8 +261,29 @@ impl  bmp_uart{
     }
 
     async fn read_coefficents(&mut self) {
-        todo!();
-        continue from here line 229 https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp
+        // todo!();
+        // continue from here line 229 https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp
+
+        // Temperature registers
+        self.dig_t1 = self.read_16_le(BMPADDRESSES::Bmp280RegisterDigT1 as u8).await;
+        // reading s16_le
+        self.dig_t2 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigT2 as u8).await;
+        self.dig_t3 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigT3 as u8).await;
+
+
+
+        self.dig_p1 = self.read_16_le(BMPADDRESSES::Bmp280RegisterDigP1 as u8).await;
+        // reading s16_le
+        self.dig_p2 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP2 as u8).await;
+        self.dig_p3 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP3 as u8).await;
+        self.dig_p4 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP4 as u8).await;
+        self.dig_p5 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP5 as u8).await;
+        self.dig_p6 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP6 as u8).await;
+        self.dig_p7 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP7 as u8).await;
+        self.dig_p8 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP8 as u8).await;
+        self.dig_p9 = self.read_s16_le(BMPADDRESSES::Bmp280RegisterDigP9 as u8).await;
+        
+
     }
 
     async fn set_sampling(&mut self, sensor_mode:SensorMode,temperature_sampling:SensorSampling,pressure_sampling:SensorSampling,filter:SensorFilter,duration:StandbyDuration){
