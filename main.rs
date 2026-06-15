@@ -186,7 +186,7 @@ impl  bmp_uart{
         // todo!() later make it so it has default parameters I can just call and save it to the struct itself
         self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX2,
             SensorSampling::SamplingX4,SensorFilter::FilterX2,
-            StandbyDuration::StandbyMs63).await;
+            StandbyDuration::StandbyMs125).await;
         Timer::after(Duration::from_millis(100)).await;
         true
      }
@@ -353,8 +353,8 @@ impl  bmp_uart{
 
         let t_fine = var_1 + var_2;
 
-        let t = (t_fine * 5 + 128) >>8;
-        info!("temperature :{}",t/100);
+        let t: f32 = ((t_fine * 5 + 128) >>8) as f32;
+        info!("temperature :{}",t/100.);
        }
 
  
@@ -399,7 +399,7 @@ async fn main(spawner: Spawner) {
     bmp280.begin().await;
     loop {
         info!("Hello world!");
-        Timer::after(Duration::from_millis(100)).await;
+        Timer::after(Duration::from_millis(10)).await;
         bmp280.read_temperature().await;
     }
 
