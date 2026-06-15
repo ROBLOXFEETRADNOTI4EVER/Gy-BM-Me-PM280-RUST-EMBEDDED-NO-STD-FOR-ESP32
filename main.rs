@@ -43,7 +43,7 @@ pub enum BMPADDRESSES{
     Bmp280RegisterTempdata = 0xFA as u8,
   }
 
-  #[repr(u8)] // <--- We need this to make sure it detects it as a u8 and not a isize
+  #[repr(8)] // <--- We need this to make sure it detects it as a u8 and not a isize
 pub enum SensorSampling {
     /** No over-sampling. */
     SamplingNone = 0x00,
@@ -177,6 +177,7 @@ impl  bmp_uart{
 
 
         self.read_coefficents().await;
+        // todo!() later make it so it has default parameters I can just call and save it to the struct itself
         self.set_sampling(SensorMode::ModeNormal,SensorSampling::SamplingX4,SensorSampling::SamplingX4,SensorFilter::FilterX2,StandbyDuration::StandbyMs125).await;
         Timer::after(Duration::from_millis(30)).await;
         true
@@ -191,7 +192,7 @@ impl  bmp_uart{
         buffer[0] = register; // putting the register in the 1st part of the buffer
         buffer[1] = value; // putting the value in the second part of the buffer
 
-        self.i2c.write_async(self.chip_address as u8,&mut buffer ).await;
+        self.i2c.write_async(self.chip_address as u8,&mut buffer ).await; // NEED TO ADD A PROPER ERROR HANDLING SYSTEM
 
     }
 
@@ -241,7 +242,24 @@ impl  bmp_uart{
          * 
          * */
 
-        self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, )  NEED TO IMPLEMENT A .get to bitshift numbs since it i'm having troubles  i need to shift all the config data into a u8 and pass it as an arugment
+         /*
+            C++ CODE BELOW ME IS TRANSLATED TO ctrl_get 
+             unsigned int get() { return (osrs_t << 5) | (osrs_p << 2) | mode; }
+--------------------------------------------------------------------------------------------------
+            C++ CODE BELOW ME IS TRANSLATED TO config_get 
+             unsigned int get() { return (t_sb << 5) | (filter << 2) | spi3w_en; }
+          */
+        let config_get: u8 = ((duration as u8 )<< 5) | ((filter as u8) << 2) ;
+        let ctrl_get: u8 = ((temperature_sampling as u8 )<< 5) | ((pressure_sampling as u8) << 2) ;
+
+
+
+
+        self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, config_get).await;
+        self.write_8(BMPADDRESSES::Bmp280RegisterConfig as u8, ctrl_get).await;
+        
+        
+         //NEED TO IMPLEMENT A .get to bitshift numbs since it I'm having troubles  i need to shift all the config data into a u8 and pass it as an arugment
         // CONTINUE FROM LINE 139 
         // CONTINUE WITH SET SAMPLING YES I MADE AN ERROR BY CHOICE 
         // https://github.com/adafruit/Adafruit_BMP280_Library/blob/master/Adafruit_BMP280.cpp#L125
