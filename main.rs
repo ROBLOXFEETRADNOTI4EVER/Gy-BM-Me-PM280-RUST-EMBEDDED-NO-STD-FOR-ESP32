@@ -217,9 +217,9 @@ impl  bmp_uart{
 
     async fn read_16(&mut self,register :u8) -> u16{ // returning 0 if there is a problem
         let mut buffer = [0u8; 2];
-        buffer[0] = register;
+        
 
-        let operation = self.i2c.write_read_async(self.chip_address, &[buffer[0]], &mut buffer).await;
+        let operation = self.i2c.write_read_async(self.chip_address, &[register], &mut buffer).await;
         match operation {
             Ok(_) =>{
                (buffer[0] as u16) << 8 | (buffer[1] as u16)
@@ -324,6 +324,32 @@ impl  bmp_uart{
 
     }
 
+    async fn read_temperature(&mut self){
+        let mut var_1:i32;
+        let mut  var_2:i32;
+
+        // if no snesor id return false -1 ig
+ 
+        let mut adc_t: i32  = (self.read_24(BMPADDRESSES::Bmp280RegisterTempdata as u8).await) as i32;
+        adc_t >>= 4;
+
+        var_1 = ((adc_t >> 3) - ((self.dig_t1 as i32) << 1)) * 
+        (self.dig_t2 as i32) >> 11;
+        
+        let var_2 =
+        (((adc_t >> 4) - (self.dig_t1 as i32))
+        * ((adc_t >> 4) - (self.dig_t1 as i32)))
+        >> 12;
+    
+        let var_2 =
+            (var_2 * (self.dig_t3 as i32)) >> 14;    
+
+        let t_fine = var_1 + var_2;
+
+        let t = (t_fine * 5 + 128) >>8;
+        info!("temperature :{}",t/100);
+       }
+
  
     
 }
@@ -362,11 +388,12 @@ async fn main(spawner: Spawner) {
     // TODO: Spawn some tasks
     // let _ = spawner;
     info!("checking if the chips id is the same as what is being read:{:#?}",bmp280.check_chip().await);
-
-
+    
+    bmp280.begin().await;
     loop {
         info!("Hello world!");
         Timer::after(Duration::from_millis(1000)).await;
+        bmp280.read_temperature().await;
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-rc.0/examples/src/bin
