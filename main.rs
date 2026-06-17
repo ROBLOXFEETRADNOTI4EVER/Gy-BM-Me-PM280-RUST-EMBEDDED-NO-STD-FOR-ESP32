@@ -6,10 +6,12 @@ use core::fmt::UpperHex;
 use defmt::{info, println};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
+use esp_hal::gpio::interconnect::PeripheralSignal;
 use esp_hal::{clock::CpuClock, time::Rate};
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
 use esp_hal::i2c::master::{Config, I2c};
+use libm::pow;
 
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -360,7 +362,7 @@ impl  bmp_uart{
         Some(t/100.)
        }
 
- 
+       
        async fn read_pressure(&mut self) ->Option<f32>{
         let temp = self.read_temperature().await;
         match temp{
@@ -391,6 +393,29 @@ impl  bmp_uart{
         
         
         Some((p  as f32)/256.)
+
+       }
+    /*
+     Tthe sea_level_hpa means the hpa value of the sea level of the country or region
+     add hpa value according to the sea level 
+    
+     */
+        async fn read_altitude(&mut self, sea_level_hpa:f32)-> Option<f64>{
+
+        let temp = self.read_pressure().await;
+        match temp{
+            Some(pressure) =>{
+                let pressure = pressure / 100.;
+                let altitude = 44330. * (1.0 - pow((pressure / sea_level_hpa) as f64, 0.1903)); // using libm pow function here libm is a no std libary 
+                Some(altitude) // returning altitude in meters
+
+            } // we just wanted to make sure if there was an error with chip read it will tell it forward
+            None =>{
+                return None // returning None if there is an error
+            }
+        }
+        
+
 
        }
     
@@ -452,6 +477,17 @@ async fn main(spawner: Spawner) {
                 info!("thre was an errow while reading")
             }
     }
+        Timer::after(Duration::from_millis(300)).await;
+        match bmp280.read_altitude(1021.0).await{ // 1013.25 if checking from pecs
+            Some(data) =>{
+                info!("The Altitude is :{}m",data);
+            }
+            None=>{
+                info!("thre was an errow while reading")
+            }
+    }
+
+
 }
 
 
