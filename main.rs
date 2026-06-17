@@ -129,7 +129,7 @@ pub enum StandbyDuration {
     dig_p7 : i16,
     dig_p8 : i16,
     dig_p9 : i16,
-
+    t_fine : i32
 }
 
 
@@ -139,7 +139,7 @@ impl  bmp_uart{
     async fn new(i2c:  I2c<'static, esp_hal::Async>,chip_address : u8 ) -> Self{
         Self {i2c,chip_address
             ,dig_p1:0,dig_p2:0,dig_p3:0,dig_p4:0,dig_p5:0,dig_p6:0,dig_p7:0,dig_p8:0,dig_p9:0,
-            dig_t1:0,dig_t2:0,dig_t3:0}
+            dig_t1:0,dig_t2:0,dig_t3:0,t_fine:0}
 
     }
     async fn print_self_data(&mut self){
@@ -332,11 +332,13 @@ impl  bmp_uart{
 
     }
 
-    async fn read_temperature(&mut self){
+    async fn read_temperature(&mut self)-> Option<f32>{ // returning None if there was an error
 
 
-        // if no snesor id return false -1 ig
- 
+        // if no snesor id return NONE
+        if self.check_chip().await == false{
+            return None
+        }
         let mut adc_t: i32  = (self.read_24(BMPADDRESSES::Bmp280RegisterTempdata as u8).await) as i32;
         adc_t >>= 4;
 
@@ -351,13 +353,46 @@ impl  bmp_uart{
         let var_2 =
             (var_2 * (self.dig_t3 as i32)) >> 14;    
 
-        let t_fine = var_1 + var_2;
+        let t_fine = var_1 + var_2;          self.t_fine = t_fine; // making sure the self.t_fine is the same so I can call in the read_pressure part
 
         let t: f32 = ((t_fine * 5 + 128) >>8) as f32;
-        info!("temperature :{}",t/100.);
+        // info!("temperature :{}",t/100.);
+        Some(t/100.)
        }
 
  
+       async fn read_pressure(&mut self) ->Option<f32>{
+        let temp = self.read_temperature().await;
+        match temp{
+            Some(_data) =>{} // we just wanted to make sure if there was an error with chip read it will tell it forward
+            None =>{
+                return None // returning None if there is an error
+            }
+        }
+
+        let  mut adc_p = (self.read_24(BMPADDRESSES::Bmp280RegisterPressuredata as u8).await) as i64; // PROBLEM MIGHT BE HERE 
+        adc_p >>= 4;
+
+        let  var_1 = (self.t_fine as i64) - 128000;
+        let  var_2 = var_1 * var_1 * (self.dig_p6 as i64);
+        let  var_2 = var_2 +((var_1 * (self.dig_p5 as i64) ) << 17);
+        let var_2 = var_2 + (((self.dig_p4 as i64)) << 35);
+        let var_1 = ((var_1 * var_1 * (self.dig_p3 as i64) >> 8) + ((var_1 * (self.dig_p2 as i64) << 12)));
+        let var_1 = ((((1 as i64) << 47) + var_1) * (self.dig_p1 as i64)) >> 33;
+
+        if var_1 == 0{
+            return Some(0.) // avoid exception caused by division by zero
+        }
+        let p: i64 = 1048576 - adc_p;
+        let p: i64 = (((p << 31) - var_2) * 3125) / var_1;
+        let var_1 = ((self.dig_p9 as i64) * (p >> 13) * (p >> 13)) >> 25;
+        let var_2 = (((self.dig_p8 as i64) * p )) >> 19;
+        let p: i64 = ((p + var_1 + var_2) >> 8) + ((self.dig_p7 as i64) << 4);
+        
+        
+        Some((p  as f32)/256.)
+
+       }
     
 }
 
@@ -397,11 +432,28 @@ async fn main(spawner: Spawner) {
     info!("checking if the chips id is the same as what is being read:{:#?}",bmp280.check_chip().await);
     
     bmp280.begin().await;
+
     loop {
-        info!("Hello world!");
-        Timer::after(Duration::from_millis(10)).await;
-        bmp280.read_temperature().await;
+        // bmp280.read_temperature().await;
+        match bmp280.read_pressure().await{
+            Some(data) =>{
+                info!("The data is {}Pa or {}hPa",data,data / 100.);
+            }
+            None=>{
+                info!("thre was an errow while reading")
+            }
+        }
+        Timer::after(Duration::from_millis(300)).await;
+        match bmp280.read_temperature().await{
+            Some(data) =>{
+                info!("The temperature is :{}C",data);
+            }
+            None=>{
+                info!("thre was an errow while reading")
+            }
     }
+}
+
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-rc.0/examples/src/bin
 }
